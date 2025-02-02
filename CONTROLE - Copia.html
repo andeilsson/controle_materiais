@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Materiais</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        .material-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container my-4">
+        <!-- Cadastro de Material -->
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Cadastro de Material</h5>
+            </div>
+            <div class="card-body">
+                <form id="formCadastro" onsubmit="cadastrarMaterial(event)">
+                    <div class="mb-3">
+                        <label class="form-label">Código</label>
+                        <input type="text" id="codigo" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descrição</label>
+                        <input type="text" id="descricao" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Quantidade</label>
+                        <input type="number" id="quantidade" class="form-control" min="0" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Cadastrar</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Lista de Materiais -->
+        <div class="card mt-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Materiais Cadastrados</h5>
+            </div>
+            <div class="card-body">
+                <div id="listaMateriais"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // URL da API do Google Apps Script
+        const apiUrl = 'https://script.google.com/macros/s/AKfycbzx3_VG69mlsJ48gHH6ZupWLDzYWrcMu33a0Hx5_4AlUhw-dPS-RgmzxUXSWhWEwXIJ/exec';
+
+        // Função para carregar dados do Google Sheets
+        function carregarMateriais() {
+            fetch(apiUrl)
+                .then(response => response.text())
+                .then(data => {
+                    const resultados = Papa.parse(data, { header: true });
+                    localStorage.setItem('materiais', JSON.stringify(resultados.data));
+                    atualizarListaMateriais(resultados.data);
+                })
+                .catch(error => console.error('Erro ao carregar materiais:', error));
+        }
+
+        // Função para cadastrar material
+        function cadastrarMaterial(event) {
+            event.preventDefault();
+            
+            const codigo = document.getElementById('codigo').value;
+            const descricao = document.getElementById('descricao').value;
+            const quantidade = parseInt(document.getElementById('quantidade').value) || 0;
+
+            if (!codigo || !descricao || quantidade < 0) {
+                alert('Preencha todos os campos corretamente!');
+                return;
+            }
+
+            // Enviando dados para a API
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    codigo: codigo,
+                    descricao: descricao,
+                    quantidade: quantidade
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    alert('Material cadastrado com sucesso!');
+                    document.getElementById('formCadastro').reset();
+                    carregarMateriais(); // Recarrega a lista de materiais após o cadastro
+                } else {
+                    alert('Erro: ' + data.message);
+                }
+            })
+            .catch(error => console.error('Erro ao cadastrar material:', error));
+        }
+
+        // Função para atualizar a lista de materiais
+        function atualizarListaMateriais(materiais) {
+            const lista = document.getElementById('listaMateriais');
+            
+            if (materiais.length === 0) {
+                lista.innerHTML = '<p>Nenhum material cadastrado.</p>';
+                return;
+            }
+
+            lista.innerHTML = materiais.map(material => `
+                <div class="material-item">
+                    <strong>Código: ${material.Código}</strong><br>
+                    Descrição: ${material.Descrição}<br>
+                    Quantidade: ${material.Quantidade}
+                </div>
+            `).join('');
+        }
+
+        // Chame carregarMateriais ao iniciar
+        window.onload = function() {
+            carregarMateriais();
+        };
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
